@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "437902386839",
+    "project_id": "expisave",
+    "storage_bucket": "expisave.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:437902386839:android:0003ecdfd3a5583c83ebd2",
+        "android_client_info": {
+          "package_name": "com.example.flutter_application_1"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "437902386839-kbd82cu3u8jtsh92mntipvns0nij7g4t.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDFDWwX4DGhoxelZqQ3L-80AJQyl2t9ggw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "437902386839-kbd82cu3u8jtsh92mntipvns0nij7g4t.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
