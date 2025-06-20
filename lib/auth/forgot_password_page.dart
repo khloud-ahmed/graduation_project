@@ -10,6 +10,7 @@ class ForgotPasswordPage extends StatefulWidget {
 
 class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
   final _emailController = TextEditingController();
+  final Color mainColor = const Color(0xFF1E7A8D);
 
   Future<void> _sendResetLink() async {
     final email = _emailController.text.trim();
@@ -48,7 +49,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
             children: [
               const Text(
                 "Forgot Password",
-                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.black),
               ),
               const SizedBox(height: 12),
               const Text(
@@ -62,18 +63,23 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                   labelText: "Email",
                   filled: true,
                   fillColor: Color(0xFFF1F5F9),
-                  border: OutlineInputBorder(),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.all(Radius.circular(12)),
+                  ),
                 ),
               ),
               const SizedBox(height: 20),
               ElevatedButton(
                 onPressed: _sendResetLink,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.black,
-                  foregroundColor: Colors.white,
+                  backgroundColor: mainColor,
                   minimumSize: const Size(double.infinity, 55),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
                 ),
-                child: const Text("Send Reset Link"),
+                child: const Text(
+                  "Send Reset Link",
+                  style: TextStyle(fontSize: 18, color: Colors.white),
+                ),
               ),
             ],
           ),

@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'login_page.dart';
 
 class SignUpPage extends StatefulWidget {
@@ -21,6 +22,17 @@ class _SignUpPageState extends State<SignUpPage> {
   bool _obscurePassword = true;
   bool _obscureConfirm = true;
 
+  final Color mainColor = const Color(0xFF1E7A8D);
+
+  Future<void> saveUserFcmToken(String userId) async {
+    final fcmToken = await FirebaseMessaging.instance.getToken();
+    if (fcmToken != null) {
+      await FirebaseFirestore.instance.collection('users').doc(userId).update({
+        'fcm_token': fcmToken,
+      });
+    }
+  }
+
   Future<void> _signUp() async {
     final firstName = _firstNameController.text.trim();
     final lastName = _lastNameController.text.trim();
@@ -29,49 +41,41 @@ class _SignUpPageState extends State<SignUpPage> {
     final password = _passwordController.text;
     final confirmPassword = _confirmPasswordController.text;
 
-    // Validation Checks
     if (firstName.isEmpty ||
         lastName.isEmpty ||
         email.isEmpty ||
         phone.isEmpty ||
         password.isEmpty ||
         confirmPassword.isEmpty) {
-      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Please fill in all fields")),
       );
       return;
     }
 
-    // Email Format Check
     final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
     if (!emailRegex.hasMatch(email)) {
-      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Please enter a valid email address")),
       );
       return;
     }
+
     if (phone.length != 11 || !RegExp(r'^\d+$').hasMatch(phone)) {
-      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text("Please enter a valid 11-digit phone number")),
+        const SnackBar(content: Text("Please enter a valid 11-digit phone number")),
       );
       return;
     }
-    // Password length check
+
     if (password.length < 6) {
-      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Password must be at least 6 characters")),
       );
       return;
     }
 
-    // Password confirmation check
     if (password != confirmPassword) {
-      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Passwords do not match")),
       );
@@ -79,32 +83,31 @@ class _SignUpPageState extends State<SignUpPage> {
     }
 
     try {
-      final userCredential =
-          await FirebaseAuth.instance.createUserWithEmailAndPassword(
+      final userCredential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
         email: email,
         password: password,
       );
 
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(userCredential.user!.uid)
-          .set({
+      final userId = userCredential.user!.uid;
+
+      await FirebaseFirestore.instance.collection('users').doc(userId).set({
         'firstName': firstName,
         'lastName': lastName,
         'email': email,
         'phone': phone,
-        'uid': userCredential.user!.uid,
+        'uid': userId,
         'createdAt': FieldValue.serverTimestamp(),
       });
 
-      if (!mounted) return;
+      await saveUserFcmToken(userId);
+
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (_) => const LoginPage(successMessage:"Account created successfully")),
+        MaterialPageRoute(
+          builder: (_) => const LoginPage(successMessage: "Account created successfully"),
+        ),
       );
     } catch (e) {
-      
-      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("Sign up failed: ${e.toString()}")),
       );
@@ -139,27 +142,22 @@ class _SignUpPageState extends State<SignUpPage> {
             const SizedBox(height: 16),
             _buildTextField(_phoneController, "Phone Number"),
             const SizedBox(height: 16),
-            _buildPasswordField(
-                _passwordController, "Password", _obscurePassword, () {
+            _buildPasswordField(_passwordController, "Password", _obscurePassword, () {
               setState(() => _obscurePassword = !_obscurePassword);
             }),
             const SizedBox(height: 16),
-            _buildPasswordField(
-                _confirmPasswordController, "Confirm Password", _obscureConfirm,
-                () {
+            _buildPasswordField(_confirmPasswordController, "Confirm Password", _obscureConfirm, () {
               setState(() => _obscureConfirm = !_obscureConfirm);
             }),
             const SizedBox(height: 30),
             ElevatedButton(
               onPressed: _signUp,
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.black,
-                foregroundColor: Colors.white,
+                backgroundColor: mainColor,
                 minimumSize: const Size(double.infinity, 55),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(30)),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
               ),
-              child: const Text("Sign Up"),
+              child: const Text("Sign Up", style: TextStyle(fontSize: 18, color: Colors.white)),
             ),
             const SizedBox(height: 20),
             Row(
@@ -173,10 +171,9 @@ class _SignUpPageState extends State<SignUpPage> {
                       MaterialPageRoute(builder: (_) => const LoginPage()),
                     );
                   },
-                  child: const Text(
+                  child: Text(
                     "Login",
-                    style: TextStyle(
-                        color: Colors.blue, fontWeight: FontWeight.bold),
+                    style: TextStyle(color: mainColor, fontWeight: FontWeight.bold),
                   ),
                 )
               ],
@@ -199,8 +196,12 @@ class _SignUpPageState extends State<SignUpPage> {
     );
   }
 
-  Widget _buildPasswordField(TextEditingController controller, String label,
-      bool obscure, VoidCallback toggle) {
+  Widget _buildPasswordField(
+    TextEditingController controller,
+    String label,
+    bool obscure,
+    VoidCallback toggle,
+  ) {
     return TextField(
       controller: controller,
       obscureText: obscure,

@@ -1,10 +1,11 @@
-
+import 'dart:convert';
+import 'package:flutter/foundation.dart'; // مهم علشان نعرف إذا كود Web ولا Mobile
 import 'package:flutter/material.dart';
 import '../models/product_instance_model.dart';
 
 class ProductInstanceCard extends StatelessWidget {
   final ProductInstanceModel instance;
-  const ProductInstanceCard({Key? key, required this.instance}) : super(key: key);
+  const ProductInstanceCard({super.key, required this.instance});
 
   Color getBorderColor() {
     switch (instance.expirationStatus) {
@@ -58,10 +59,53 @@ class ProductInstanceCard extends StatelessWidget {
     }
   }
 
+  Widget buildImage() {
+    if (instance.imageData.isEmpty) {
+      return Container(
+        width: 80,
+        height: 80,
+        decoration: BoxDecoration(
+          color: Colors.grey[200],
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: const Icon(Icons.image_not_supported, color: Colors.grey, size: 40),
+      );
+    }
+
+    // ✅ لو Web أو الصورة URL نستخدم Image.network
+    if (kIsWeb || instance.imageData.startsWith('http')) {
+      return Image.network(
+        instance.imageData,
+        width: 80,
+        height: 80,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) =>
+            const Icon(Icons.broken_image, size: 80, color: Colors.grey),
+      );
+    }
+
+    // ✅ لو Mobile وفيه Base64
+    try {
+      final bytes = base64Decode(instance.imageData);
+      return Image.memory(
+        bytes,
+        width: 80,
+        height: 80,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) =>
+            const Icon(Icons.broken_image, size: 80, color: Colors.grey),
+      );
+    } catch (e) {
+      return const Icon(Icons.broken_image, size: 80, color: Colors.grey);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final daysLeft = instance.expirationDate.difference(DateTime.now()).inDays;
-    final expirationDateFormatted = '${instance.expirationDate.day}-${instance.expirationDate.month}-${instance.expirationDate.year}';
+    final displayDaysLeft = daysLeft < 0 ? 0 : daysLeft;
+    final expirationDateFormatted =
+        '${instance.expirationDate.day}-${instance.expirationDate.month}-${instance.expirationDate.year}';
 
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 6),
@@ -82,43 +126,33 @@ class ProductInstanceCard extends StatelessWidget {
       ),
       child: Row(
         children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: buildImage(),
+          ),
+          const SizedBox(width: 12),
           Expanded(
-  child: Row(
-    children: [
-      Container(
-        width: 40,
-        height: 40,
-        decoration: BoxDecoration(
-          color: getStatusTextColor().withOpacity(0.2),
-          shape: BoxShape.circle,
-        ),
-        alignment: Alignment.center,
-        child: Text(
-          '$daysLeft d',
-          style: TextStyle(
-            color: getStatusTextColor(),
-            fontWeight: FontWeight.bold,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  instance.productName.isNotEmpty
+                      ? instance.productName
+                      : 'No name found',
+                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '$displayDaysLeft days remaining',
+                  style: const TextStyle(color: Colors.black54),
+                ),
+                Text(
+                  'Expires on $expirationDateFormatted',
+                  style: const TextStyle(color: Colors.black54),
+                ),
+              ],
+            ),
           ),
-        ),
-      ),
-      const SizedBox(width: 12),
-      Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            instance.productName,
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            'Expires on $expirationDateFormatted',
-            style: const TextStyle(color: Colors.black54),
-          ),
-        ],
-      ),
-    ],
-  ),
-),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
@@ -127,9 +161,12 @@ class ProductInstanceCard extends StatelessWidget {
             ),
             child: Text(
               getStatusText(),
-              style: TextStyle(color: getStatusTextColor(), fontWeight: FontWeight.bold),
+              style: TextStyle(
+                color: getStatusTextColor(),
+                fontWeight: FontWeight.bold,
+              ),
             ),
-          )
+          ),
         ],
       ),
     );

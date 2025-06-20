@@ -1,15 +1,23 @@
-import 'dart:io';
+import 'dart:io' show File;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:uuid/uuid.dart';
+
+import '../services/upload_service.dart';
 import 'home_screen.dart';
 
 class AddProductScreen extends StatefulWidget {
   final String userId;
   final String userName;
-  const AddProductScreen({super.key, required this.userId, required this.userName});
+
+  const AddProductScreen({
+    super.key,
+    required this.userId,
+    required this.userName,
+  });
 
   @override
   State<AddProductScreen> createState() => _AddProductScreenState();
@@ -21,21 +29,20 @@ class _AddProductScreenState extends State<AddProductScreen> {
   String? _selectedCategory;
   DateTime? _selectedDate;
   XFile? _pickedImage;
+  Uint8List? _webImageBytes;
   bool _isSaving = false;
 
-  final List<String> _categories = [
-    'Medicine',
-    'Haircare',
-    'Skincare',
-    'Food'
-  ];
+  final List<String> _categories = ['Medicine', 'Haircare', 'Skincare', 'Food'];
 
   Future<void> _pickImage() async {
     final picker = ImagePicker();
-    final image = await picker.pickImage(source: ImageSource.gallery);
+    final XFile? image = await picker.pickImage(source: ImageSource.gallery);
     if (image != null) {
+      Uint8List? imageBytes;
+      if (kIsWeb) imageBytes = await image.readAsBytes();
       setState(() {
         _pickedImage = image;
+        _webImageBytes = imageBytes;
       });
     }
   }
@@ -48,11 +55,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
       firstDate: now,
       lastDate: DateTime(now.year + 5),
     );
-    if (picked != null) {
-      setState(() {
-        _selectedDate = picked;
-      });
-    }
+    if (picked != null) setState(() => _selectedDate = picked);
   }
 
   Future<void> _saveProduct() async {
@@ -68,32 +71,39 @@ class _AddProductScreenState extends State<AddProductScreen> {
     }
 
     setState(() => _isSaving = true);
-
-    final productName = _nameController.text.trim();
-    final category = _selectedCategory!;
-    final expirationDate = _selectedDate!;
-    final quantity = int.tryParse(_quantityController.text.trim()) ?? 1;
-    final now = DateTime.now();
-    final difference = expirationDate.difference(now).inDays;
-
-    String status;
-    if (difference > 180) {
-      status = 'safe';
-    } else if (difference > 90) {
-      status = 'expiring';
-    } else if (difference <= 0) {
-      status = 'expired';
-    } else {
-      status = 'expiring';
-    }
-
-    final productRef = FirebaseFirestore.instance.collection('products');
-    final instanceRef = FirebaseFirestore.instance.collection('product_instance');
+    String imageUrl = '';
 
     try {
-      final existing = await productRef.where('name', isEqualTo: productName).limit(1).get();
-      String productId;
+      if (_pickedImage != null) {
+        imageUrl = await UploadService().uploadImage(_pickedImage!);
+      }
 
+      final productName = _nameController.text.trim();
+      final category = _selectedCategory!;
+      final expirationDate = _selectedDate!;
+      final quantity = int.tryParse(_quantityController.text.trim()) ?? 1;
+      final now = DateTime.now();
+      final diffDays = expirationDate.difference(now).inDays;
+      String status;
+      if (diffDays > 180) {
+        status = 'safe';
+      } else if (diffDays > 30) {
+        status = 'expiring';
+      } else if (diffDays <= 0) {
+        status = 'expired';
+      } else {
+        status = 'expiring';
+      }
+
+      final productRef = FirebaseFirestore.instance.collection('products');
+      final instanceRef = FirebaseFirestore.instance.collection('product_instance');
+
+      final existing = await productRef
+          .where('name', isEqualTo: productName)
+          .limit(1)
+          .get();
+
+      String productId;
       if (existing.docs.isNotEmpty) {
         productId = existing.docs.first.id;
       } else {
@@ -101,15 +111,13 @@ class _AddProductScreenState extends State<AddProductScreen> {
           'name': productName,
           'category': category,
           'created_at': now,
-          'image': '',
-          'placeholder': true
+          'image_data': imageUrl,
         });
         productId = newDoc.id;
       }
 
       final instanceId = const Uuid().v4();
       await instanceRef.doc(instanceId).set({
-
         'instance_id': instanceId,
         'product_id': productId,
         'user_id': widget.userId,
@@ -119,11 +127,11 @@ class _AddProductScreenState extends State<AddProductScreen> {
         'updated_at': now,
         'quantity': quantity,
         'expiration_status': status,
-        'consumption_rate': '',
-        'status': '',
-        'placeholder': true
+        'image_data': imageUrl,
+        'category': category,
       });
 
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Product saved successfully!')),
       );
@@ -131,7 +139,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (_) => HomeScreen(userId: widget.userId, userName: widget.userName),
+          builder: (_) => HomeScreen(userId: widget.userId),
         ),
       );
     } catch (e) {
@@ -146,11 +154,11 @@ class _AddProductScreenState extends State<AddProductScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F9FC),
+      backgroundColor: Colors.white, // ✅ خلفية بيضاء
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        leading: BackButton(color: Colors.black),
+        leading: const BackButton(color: Colors.black),
         title: const Text('Add Product', style: TextStyle(color: Colors.black)),
         centerTitle: true,
       ),
@@ -174,17 +182,15 @@ class _AddProductScreenState extends State<AddProductScreen> {
                           children: [
                             Icon(Icons.add_a_photo, size: 40, color: Colors.grey),
                             SizedBox(height: 8),
-                            Text("Tap to upload photo", style: TextStyle(color: Colors.grey))
+                            Text('Tap to upload photo', style: TextStyle(color: Colors.grey)),
                           ],
                         ),
                       )
                     : ClipRRect(
                         borderRadius: BorderRadius.circular(16),
-                        child: Image.file(
-                          File(_pickedImage!.path),
-                          fit: BoxFit.cover,
-                          width: double.infinity,
-                        ),
+                        child: kIsWeb && _webImageBytes != null
+                            ? Image.memory(_webImageBytes!, fit: BoxFit.cover)
+                            : Image.file(File(_pickedImage!.path), fit: BoxFit.cover),
                       ),
               ),
             ),
@@ -212,8 +218,8 @@ class _AddProductScreenState extends State<AddProductScreen> {
               readOnly: true,
               decoration: InputDecoration(
                 labelText: 'Expiration Date',
-                border: const OutlineInputBorder(),
                 prefixIcon: const Icon(Icons.calendar_today),
+                border: const OutlineInputBorder(),
                 hintText: _selectedDate != null
                     ? DateFormat('yyyy-MM-dd').format(_selectedDate!)
                     : 'Select a date',
@@ -232,16 +238,28 @@ class _AddProductScreenState extends State<AddProductScreen> {
             ),
             const SizedBox(height: 24),
             ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                minimumSize: const Size.fromHeight(50),
-                backgroundColor: Colors.black,
-              ),
-              onPressed: _saveProduct,
-              child: const Text('Save Product'),
-            ),
+  style: ElevatedButton.styleFrom(
+    minimumSize: const Size.fromHeight(50),
+    backgroundColor: const Color(0xFF1E7A8D), // ✅ اللون الجديد
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(12), // لمظهر عصري
+    ),
+  ),
+  onPressed: _isSaving ? null : _saveProduct,
+  child: _isSaving
+      ? const CircularProgressIndicator(color: Colors.white)
+      : const Text(
+          'Save Product',
+          style: TextStyle(color: Colors.white), // ✅ تأكد أن النص أبيض ليظهر بشكل واضح
+        ),
+),
+
+            
           ],
         ),
       ),
     );
   }
 }
+
+

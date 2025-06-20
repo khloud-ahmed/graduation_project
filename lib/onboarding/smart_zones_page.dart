@@ -1,118 +1,199 @@
 import 'package:flutter/material.dart';
 
-class SmartZonesPage extends StatelessWidget {
+class SmartZonesPage extends StatefulWidget {
   const SmartZonesPage({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final items = [
-      {
-        'dotColor': Colors.red,
-        'squareColor': Colors.green,
-        'label': 'fridge',
-      },
-      {
-        'dotColor': Colors.yellow,
-        'squareColor': Colors.blue,
-        'label': 'sauce',
-      },
-      {
-        'dotColor': Colors.green,
-        'squareColor': Colors.red.shade200,
-        'label': 'cosmetics',
-      },
-    ];
+  State<SmartZonesPage> createState() => _SmartZonesPageState();
+}
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 30),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const Icon(Icons.dashboard, size: 80, color: Colors.deepPurple),
-          const SizedBox(height: 20),
-          const Text(
-            'Smart Zones for Your Products',
-            textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 10),
-          const Text(
-            'Your items are grouped into Green (Safe), Yellow (Expiring Soon), and Red (Expired) zones based on expiry dates.',
-            textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 16, color: Colors.grey),
-          ),
-          const SizedBox(height: 30),
-          // الكروت
-          ...items.map((item) {
-            return Container(
-              margin: const EdgeInsets.symmetric(vertical: 8),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(20),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.grey.shade300,
-                    blurRadius: 6,
-                    offset: const Offset(0, 3),
-                  ),
-                ],
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Row(
-                  children: [
-                    // الدايرة الصغيرة
-                    Container(
-                      width: 8,
-                      height: 8,
-                      decoration: BoxDecoration(
-                        color: item['dotColor'] as Color,
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    // المربع الملون
-                    Container(
-                      width: 50,
-                      height: 50,
-                      decoration: BoxDecoration(
-                        color: item['squareColor'] as Color,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    // الشرايط الرمادية (كأنها معلومات)
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Container(
-                            width: 80,
-                            height: 8,
-                            color: Colors.grey.shade300,
-                          ),
-                          const SizedBox(height: 6),
-                          Container(
-                            width: 100,
-                            height: 8,
-                            color: Colors.grey.shade300,
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    // اسم المنتج
-                    Text(
-                      item['label'] as String,
-                      style: const TextStyle(color: Colors.grey),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          }),
-        ],
+class _SmartZonesPageState extends State<SmartZonesPage> with TickerProviderStateMixin {
+  final List<Map<String, dynamic>> items = [
+    {
+      'dotColor': Colors.green,
+      'squareColor': Colors.green,
+      'label': 'Safe',
+      'icon': Icons.check_circle_outline,
+    },
+    {
+      'dotColor': Colors.orange,
+      'squareColor': Colors.orange,
+      'label': 'Expiring Soon',
+      'icon': Icons.access_time,
+    },
+    {
+      'dotColor': Colors.red,
+      'squareColor': Colors.red,
+      'label': 'Expired',
+      'icon': Icons.cancel_outlined,
+    },
+  ];
+
+  late final List<AnimationController> _controllers;
+  late final List<Animation<Offset>> _animations;
+
+  @override
+  void initState() {
+    super.initState();
+    _controllers = List.generate(
+      items.length,
+      (index) => AnimationController(
+        vsync: this,
+        duration: const Duration(milliseconds: 500),
       ),
+    );
+
+    _animations = _controllers.map((controller) {
+      return Tween<Offset>(
+        begin: const Offset(1, 0),
+        end: Offset.zero,
+      ).animate(CurvedAnimation(
+        parent: controller,
+        curve: Curves.easeOut,
+      ));
+    }).toList();
+
+    _startAnimations();
+  }
+
+  void _startAnimations() async {
+    for (int i = 0; i < _controllers.length; i++) {
+      await Future.delayed(const Duration(milliseconds: 200));
+      _controllers[i].forward();
+    }
+  }
+
+  @override
+  void dispose() {
+    for (final controller in _controllers) {
+      controller.dispose();
+    }
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        centerTitle: true,
+        title: const SizedBox.shrink(), // ✅ شيلنا العنوان من فوق
+        iconTheme: const IconThemeData(color: Colors.black),
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 30),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Text(
+              'Smart Zones for Your Products',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 26,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF1E7A8D),
+              ),
+            ),
+            const SizedBox(height: 10),
+            const Text(
+              'Your items are grouped into Safe, Expiring Soon, and Expired zones based on expiry dates.',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 16, color: Colors.grey),
+            ),
+            const SizedBox(height: 30),
+
+            // ✅ Color Legend Section (Larger squares with icons)
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildColorLegend('Safe', Colors.green, Icons.check),
+                const SizedBox(height: 24),
+                _buildColorLegend('Expiring Soon', Colors.orange, Icons.access_time),
+                const SizedBox(height: 24),
+                _buildColorLegend('Expired', Colors.red, Icons.cancel),
+              ],
+            ),
+            const SizedBox(height: 40),
+
+            // ✅ Animated Cards Section
+            ...List.generate(items.length, (index) {
+              final item = items[index];
+              return AnimatedSlide(
+                offset: _animations[index].value,
+                duration: const Duration(milliseconds: 500),
+                child: AnimatedOpacity(
+                  opacity: _controllers[index].isCompleted ? 1.0 : 0.0,
+                  duration: const Duration(milliseconds: 500),
+                  child: Container(
+                    margin: const EdgeInsets.symmetric(vertical: 12),
+                    decoration: BoxDecoration(
+                      color: (item['squareColor'] as Color).withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.grey.withOpacity(0.2),
+                          blurRadius: 8,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: ListTile(
+                      leading: Icon(
+                        item['icon'] as IconData,
+                        color: item['squareColor'] as Color,
+                        size: 36,
+                      ),
+                      title: Text(
+                        item['label'] as String,
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: item['squareColor'] as Color,
+                        ),
+                      ),
+                      subtitle: const Text(
+                        'Tap to view products in this zone.',
+                        style: TextStyle(color: Colors.grey),
+                      ),
+                      trailing: const Icon(Icons.arrow_forward_ios, size: 18, color: Colors.grey),
+                      onTap: () {
+                        // Add navigation logic if needed.
+                      },
+                    ),
+                  ),
+                ),
+              );
+            }),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildColorLegend(String label, Color color, IconData icon) {
+    return Row(
+      children: [
+        Container(
+          width: 90, // ✅ Increased Size
+          height: 90,
+          decoration: BoxDecoration(
+            color: color,
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Icon(icon, color: Colors.white, size: 40),
+        ),
+        const SizedBox(width: 16),
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 20,
+            color: Colors.black87,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ],
     );
   }
 }

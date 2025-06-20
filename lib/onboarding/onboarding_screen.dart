@@ -3,7 +3,6 @@ import 'welcome_page.dart';
 import 'smart_zones_page.dart';
 import 'features_page.dart';
 import '../auth/login_page.dart';
-//import '../auth/signup_page.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -43,7 +42,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F6F9),
+      backgroundColor: Colors.white, // ✅ خلفية بيضاء
       body: Column(
         children: [
           Expanded(
@@ -61,12 +60,15 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: List.generate(
               _pages.length,
-              (index) => Container(
-                margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 12),
-                width: 10,
-                height: 10,
+              (index) => AnimatedContainer(
+                duration: const Duration(milliseconds: 300),
+                margin: const EdgeInsets.symmetric(horizontal: 5, vertical: 12),
+                width: _currentPage == index ? 12 : 8,
+                height: _currentPage == index ? 12 : 8,
                 decoration: BoxDecoration(
-                  color: _currentPage == index ? Colors.blue : Colors.grey[300],
+                  color: _currentPage == index
+                      ? const Color(0xFF1E7A8D) // ✅ اللون الأساسي
+                      : Colors.grey[300],
                   shape: BoxShape.circle,
                 ),
               ),
@@ -86,6 +88,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(30),
                         ),
+                        minimumSize: const Size.fromHeight(50),
                       ),
                       child: const Text('Back'),
                     ),
@@ -104,15 +107,18 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       }
                     },
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.black,
+                      backgroundColor: const Color(0xFF1E7A8D),
                       foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(30),
                       ),
+                      minimumSize: const Size.fromHeight(50),
                     ),
-                    child: Text(_currentPage == _pages.length - 1
-                        ? 'Get Started'
-                        : 'Next'),
+                    child: Text(
+                      _currentPage == _pages.length - 1
+                          ? 'Get Started'
+                          : 'Next',
+                    ),
                   ),
                 ),
               ],
